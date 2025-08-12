@@ -1,1 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🌱 Macetas ESP32 – Selector</title>
+  <meta name="description" content="Lista de ESP32 y acceso rápido al panel de cada maceta" />
+  <style>
+    :root{
+      --bg:#0b1020; --bg2:#121937; --ink:#e7ecff; --muted:#aab3d9; --brand:#5b7cfa; --ok:#4be477; --bad:#ff6b6b;
+      --ring:#2b3b88; --card:#101632; --shadow:0 12px 40px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#0f1530 40%, #0b1020);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    header{max-width:1100px;margin:0 auto;padding:28px 16px 8px}
+    h1{margin:0;font-size:28px;letter-spacing:.2px}
+    .muted{color:var(--muted)}
+    .wrap{max-width:1100px;margin:0 auto;padding:10px 16px 40px}
+    .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+    .card{background:linear-gradient(180deg,var(--bg2),var(--card));border:1px solid var(--ring);border-radius:20px;padding:16px;box-shadow:var(--shadow)}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .grow{flex:1}
+    input,button{font:inherit}
+    input[type=text]{width:100%;background:#0e1330;border:1px solid #2a3570;color:var(--ink);border-radius:12px;padding:10px 12px;outline:none}
+    input[type=text]:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(91,124,250,.25)}
+    .btn{border:0;border-radius:12px;background:var(--brand);color:white;font-weight:700;padding:10px 14px;cursor:pointer}
+    .btn.secondary{background:#2a46f4cc}
+    .btn.ghost{background:transparent;border:1px solid #2a3570;color:var(--ink)}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .device{position:relative}
+    .device h3{margin:0 0 4px 0;font-size:18px}
+    .ip{font-size:13px;color:var(--muted)}
+    .actions{display:flex;gap:8px;margin-top:12px}
+    .tag{font-size:12px;border:1px solid #33408a;color:#c7cff9;border-radius:999px;padding:4px 10px}
+    .empty{opacity:.8;text-align:center;padding:28px;border:1px dashed #2a3570;border-radius:16px}
+    footer{opacity:.6;text-align:center;font-size:12px;padding:16px}
+    .danger{color:var(--bad)}
+    .ok{color:var(--ok)}
+  </style>
+</head>
+<body>
 
+<header>
+  <h1>🌱 Macetas ESP32</h1>
+  <div class="muted">Elegí una ESP32 para abrir su panel. (Se abrirá en una pestaña nueva)</div>
+</header>
+
+<div class="wrap">
+  <div class="card" style="margin-bottom:16px">
+    <div class="row">
+      <div class="grow">
+        <div class="row" style="gap:8px">
+          <input id="nombre" type="text" placeholder="Nombre (ej: Maceta Patio)" />
+          <input id="ip" type="text" placeholder="IP o host (ej: 192.168.4.1 o maceta.local)" />
+        </div>
+      </div>
+      <button class="btn" id="btnAdd">Agregar</button>
+      <button class="btn ghost" id="btnReset">Reset</button>
+    </div>
+    <div class="muted" style="margin-top:8px">
+      Consejo: si tu ESP32 está en modo punto de acceso, la IP es <b>192.168.4.1</b>. Si está en tu Wi‑Fi, mirá la IP en el router o en el monitor serie.
+    </div>
+  </div>
+
+  <div class="grid" id="lista"></div>
+
+  <div class="card" style="margin-top:16px">
+    <b>Nota importante de seguridad del navegador</b>
+    <div class="muted" style="margin-top:6px">
+      Esta página se sirve por <b>HTTPS (GitHub Pages)</b>. Por política de los navegadores, no se puede <i>incrustar</i> (iframe) ni hacer fetch a dispositivos <b>HTTP</b> en la red local ("contenido mixto").
+      Por eso, al hacer clic se abre el panel de la ESP32 en una <b>pestaña nueva</b> (HTTP), que sí funciona.
+    </div>
+  </div>
+</div>
+
+<footer>Hecho con ♥ para tus plantas</footer>
+
+<script>
+  const LS_KEY = 'macetas-esp32';
+  const listaEl = document.getElementById('lista');
+  const nombreEl = document.getElementById('nombre');
+  const ipEl = document.getElementById('ip');
+  const btnAdd = document.getElementById('btnAdd');
+  const btnReset = document.getElementById('btnReset');
+
+  function load(){
+    try { return JSON.parse(localStorage.getItem(LS_KEY)) || [] } catch(e){ return [] }
+  }
+  function save(data){ localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+
+  function render(){
+    const data = load();
+    listaEl.innerHTML = '';
+    if(data.length === 0){
+      const d = document.createElement('div');
+      d.className = 'card empty';
+      d.innerHTML = 'No hay ESP32 cargadas. Agregá arriba el nombre y la IP/host.';
+      listaEl.appendChild(d);
+      return;
+    }
+    data.forEach((dev, idx)=>{
+      const card = document.createElement('div');
+      card.className = 'card device';
+      card.innerHTML = `
+        <h3>${dev.nombre || 'ESP32'}</h3>
+        <div class="ip">${dev.host}</div>
+        <div class="actions">
+          <button class="btn" onclick="openPanel('${dev.host}')">Abrir panel</button>
+          <button class="btn secondary" onclick="copyUrl('${dev.host}')">Copiar URL</button>
+          <button class="btn ghost" onclick="delDev(${idx})">Eliminar</button>
+        </div>
+        <div style="margin-top:10px" class="muted">
+          URL: <span id="u${idx}">http://${dev.host}</span>
+        </div>`;
+      listaEl.appendChild(card);
+    });
+  }
+
+  function add(){
+    const nombre = nombreEl.value.trim();
+    const host = ipEl.value.trim();
+    if(!host){ alert('Poné la IP o el host (por ejemplo 192.168.4.1 o maceta.local)'); return }
+    const data = load();
+    data.push({nombre, host});
+    save(data);
+    nombreEl.value = '';
+    ipEl.value = '';
+    render();
+  }
+
+  function delDev(idx){
+    const data = load();
+    data.splice(idx,1);
+    save(data);
+    render();
+  }
+
+  function openPanel(host){
+    // Abrir en nueva pestaña para evitar restricciones de contenido mixto
+    window.open(`http://${host}`, '_blank', 'noopener');
+  }
+
+  async function copyUrl(host){
+    try{
+      await navigator.clipboard.writeText(`http://${host}`);
+      alert('URL copiada al portapapeles');
+    }catch(e){
+      prompt('Copiá esta URL:', `http://${host}`);
+    }
+  }
+
+  btnAdd.addEventListener('click', add);
+  btnReset.addEventListener('click', ()=>{ if(confirm('¿Borrar la lista guardada?')){ localStorage.removeItem(LS_KEY); render(); } });
+  render();
+</script>
+</body>
+</html>
