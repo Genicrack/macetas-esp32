@@ -1,57 +1,146 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Panel Maceta IoT</title>
+<title>🌱 Maceta Inteligente</title>
 <style>
-body { font-family: Arial; background: #f4f4f4; padding: 20px; }
-.card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px #ccc; margin-bottom: 20px; }
-button { padding: 10px; margin: 5px; border: none; border-radius: 5px; }
-.on { background: green; color: white; }
-.off { background: red; color: white; }
+    body {
+        font-family: Arial, sans-serif;
+        background: #f0f8f5;
+        margin: 0;
+        padding: 0;
+        color: #333;
+        text-align: center;
+    }
+    header {
+        background: #4CAF50;
+        color: white;
+        padding: 20px;
+        font-size: 24px;
+        font-weight: bold;
+    }
+    .container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 20px;
+    }
+    .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        width: 250px;
+        margin: 15px;
+        padding: 20px;
+    }
+    .card h3 {
+        margin-bottom: 10px;
+    }
+    .btn {
+        display: block;
+        width: 100%;
+        padding: 15px;
+        margin-top: 10px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+    .btn-on {
+        background: #4CAF50;
+        color: white;
+    }
+    .btn-off {
+        background: #ccc;
+        color: black;
+    }
+    .sensor {
+        font-size: 18px;
+        margin: 8px 0;
+    }
 </style>
 </head>
 <body>
-<h1>🌱 Panel Maceta Automatizada</h1>
 
-<div class="card">
-  <h3>Luces</h3>
-  <button onclick="toggle('luzNormal')" id="btnLuzNormal">Luz Normal</button>
-  <button onclick="toggle('luzUV')" id="btnLuzUV">Luz UV</button>
-</div>
+<header>🌱 Panel de Control - Maceta Inteligente</header>
 
-<div class="card">
-  <h3>Bombas</h3>
-  <button onclick="toggle('bomba1')" id="btnBomba1">Bomba Agua</button>
-  <button onclick="toggle('bomba2')" id="btnBomba2">Bomba Nutrientes</button>
-</div>
+<div class="container">
+    <div class="card">
+        <h3>💡 Luz Normal</h3>
+        <button class="btn btn-off" id="btnLuzNormal" onclick="toggle('luzNormal')">Encender</button>
+    </div>
 
-<div class="card">
-  <h3>Sensores</h3>
-  <p>Humedad: <span id="humedad">--</span>%</p>
-  <p>Temperatura: <span id="temperatura">--</span>°C</p>
-  <p>Lluvia/Nieve: <span id="lluvia">--</span></p>
+    <div class="card">
+        <h3>🔆 Luz UV</h3>
+        <button class="btn btn-off" id="btnLuzUV" onclick="toggle('luzUV')">Encender</button>
+    </div>
+
+    <div class="card">
+        <h3>💧 Bomba Agua</h3>
+        <button class="btn btn-off" id="btnBomba1" onclick="toggle('bomba1')">Encender</button>
+    </div>
+
+    <div class="card">
+        <h3>🌿 Bomba Nutrientes</h3>
+        <button class="btn btn-off" id="btnBomba2" onclick="toggle('bomba2')">Encender</button>
+    </div>
+
+    <div class="card">
+        <h3>📊 Sensores</h3>
+        <div class="sensor">Humedad: <span id="humedad">--</span>%</div>
+        <div class="sensor">Temperatura: <span id="temperatura">--</span>°C</div>
+        <div class="sensor">Lluvia/Nieve: <span id="lluvia">--</span></div>
+    </div>
 </div>
 
 <script>
 const ESP32_IP = "http://192.168.0.150"; // Cambia por la IP de tu ESP32
 
 function updateData() {
-  fetch(`${ESP32_IP}/getData`)
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("humedad").textContent = data.humedad;
-      document.getElementById("temperatura").textContent = data.temperatura;
-      document.getElementById("lluvia").textContent = data.lluvia;
-    });
+    fetch(`${ESP32_IP}/getData`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("humedad").textContent = data.humedad;
+            document.getElementById("temperatura").textContent = data.temperatura;
+            document.getElementById("lluvia").textContent = data.lluvia;
+
+            setButtonState("btnLuzNormal", data.luzNormal);
+            setButtonState("btnLuzUV", data.luzUV);
+            setButtonState("btnBomba1", data.bomba1);
+            setButtonState("btnBomba2", data.bomba2);
+        });
 }
 
 function toggle(device) {
-  fetch(`${ESP32_IP}/setDevice?device=${device}&state=on`);
+    const btn = document.getElementById(`btn${capitalize(device)}`);
+    const state = btn.classList.contains("btn-on") ? "off" : "on";
+
+    fetch(`${ESP32_IP}/setDevice?device=${device}&state=${state}`)
+        .then(() => updateData());
+}
+
+function setButtonState(btnId, isOn) {
+    const btn = document.getElementById(btnId);
+    if (isOn) {
+        btn.classList.remove("btn-off");
+        btn.classList.add("btn-on");
+        btn.textContent = "Apagar";
+    } else {
+        btn.classList.remove("btn-on");
+        btn.classList.add("btn-off");
+        btn.textContent = "Encender";
+    }
+}
+
+function capitalize(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 setInterval(updateData, 2000);
+updateData();
 </script>
+
 </body>
 </html>
