@@ -1,42 +1,57 @@
+
 <!DOCTYPE html>
-<html lang="es">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Panel Maceta ESP32</title>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Panel Maceta IoT</title>
 <style>
-body { font-family: sans-serif; background: #0b1020; color: white; padding: 20px; }
-input, button { padding: 8px; margin: 5px; border-radius: 5px; }
-#status { white-space: pre; background: #111; padding: 10px; border-radius: 5px; }
+body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+.card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px #ccc; margin-bottom: 20px; }
+button { padding: 10px; margin: 5px; border: none; border-radius: 5px; }
+.on { background: green; color: white; }
+.off { background: red; color: white; }
 </style>
+</head>
+<body>
+<h1>🌱 Panel Maceta Automatizada</h1>
 
-<h1>🌱 Panel Maceta ESP32</h1>
-<p>Ingresa la IP de tu ESP32 (ej: <b>192.168.4.1</b> si estás conectado a su red):</p>
-<input id="ip" placeholder="Ej: 192.168.4.1">
-<button onclick="conectar()">Conectar</button>
+<div class="card">
+  <h3>Luces</h3>
+  <button onclick="toggle('luzNormal')" id="btnLuzNormal">Luz Normal</button>
+  <button onclick="toggle('luzUV')" id="btnLuzUV">Luz UV</button>
+</div>
 
-<h2>Datos de la planta</h2>
-<div id="status">Sin datos aún...</div>
+<div class="card">
+  <h3>Bombas</h3>
+  <button onclick="toggle('bomba1')" id="btnBomba1">Bomba Agua</button>
+  <button onclick="toggle('bomba2')" id="btnBomba2">Bomba Nutrientes</button>
+</div>
+
+<div class="card">
+  <h3>Sensores</h3>
+  <p>Humedad: <span id="humedad">--</span>%</p>
+  <p>Temperatura: <span id="temperatura">--</span>°C</p>
+  <p>Lluvia/Nieve: <span id="lluvia">--</span></p>
+</div>
 
 <script>
-let baseUrl = "";
+const ESP32_IP = "http://192.168.0.150"; // Cambia por la IP de tu ESP32
 
-async function conectar() {
-    const ip = document.getElementById("ip").value.trim();
-    if (!ip) return alert("Poné la IP de la ESP32");
-    baseUrl = "http://" + ip;
-    obtenerEstado();
-    setInterval(obtenerEstado, 3000);
+function updateData() {
+  fetch(`${ESP32_IP}/getData`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("humedad").textContent = data.humedad;
+      document.getElementById("temperatura").textContent = data.temperatura;
+      document.getElementById("lluvia").textContent = data.lluvia;
+    });
 }
 
-async function obtenerEstado() {
-    try {
-        const r = await fetch(baseUrl + "/api/status");
-        if (!r.ok) throw new Error(r.status);
-        const j = await r.json();
-        document.getElementById("status").textContent = JSON.stringify(j, null, 2);
-    } catch (e) {
-        document.getElementById("status").textContent = "Error conectando: " + e;
-    }
+function toggle(device) {
+  fetch(`${ESP32_IP}/setDevice?device=${device}&state=on`);
 }
+
+setInterval(updateData, 2000);
 </script>
+</body>
 </html>
